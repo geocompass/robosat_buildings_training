@@ -1,0 +1,2 @@
+# robosat_buildings_training
+使用mapbox/robosat训练用来提取建筑物
