@@ -36,6 +36,8 @@ docker run --runtime=nvidia -it --rm -v $PWD:/data --ipc=host mapbox/robosat:lat
 - 自有数据源。通过 [QGIS](https://qgis.org/en/site/) 或 ArcMap 等工具，加载遥感影像底图，描述的建筑物轮廓 Shapefile 数据。
 本文使用第二种数据来源，并已[开源数据源](https://github.com/geocompass/robosat_buildings_training/tree/master/shp_data)。开源的矢量数据覆盖厦门核心区。
 
+![训练区矢量数据预览](https://github.com/geocompass/robosat_buildings_training/blob/master/img/buia_xiamen_preview.png)
+
 ### 2.2 获取建筑物轮廓geojson数据
 ​    通过在线工具 [mapshaper](https://mapshaper.org/)，将 shapefile 数据转换为 geojson 数据。
 
@@ -149,7 +151,7 @@ docker run -it --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:lates
 
 ​    配置文档中，最重要的是配置 `dataset` 目录，也就是上一步中下载的遥感影像瓦片路径。制作的蒙版标记效果如下图。
 
-![mask](/Users/wucan/Documents/GitHub/robosat_buildings_training/img/mask.gif)
+![mask](https://github.com/geocompass/robosat_buildings_training/blob/master/img/mask.gif)
 
 ​    至此，训练和建模所需的瓦片和蒙版标记已经全部准备完，分别在 `tiles` 和 `masks` 目录中。
 
@@ -227,7 +229,7 @@ docker run -it --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:lates
 >   - `-h`, `--help`  show this help message and exit
 >   - `--dataset DATASET` path to dataset configuration file (default: None)  
 
-​    这里，用到了`dataset-building-weights.toml` ，是前面步骤中 `dataset-building.toml` 瓦片路径修改为包含训练数据集 `dataset` 的路径。。执行权重计算命令后，得到权重为：`values = [1.653415, 5.266637]` 。将其追加到 `dataset-building-weights.toml` 文件中，结果如下。
+​    这里，用到了`dataset-building-weights.toml` ，是将前面步骤中的 `dataset-building.toml` 瓦片路径修改为包含训练数据集 `dataset` 的路径。执行权重计算命令后，得到权重为：`values = [1.653415, 5.266637]` 。将其追加到 `dataset-building-weights.toml` 文件中，结果如下。
 
 ```
 # Configuration related to a specific dataset.
@@ -254,6 +256,60 @@ docker run -it --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:lates
   values = [1.653415, 5.266637]
 ```
 
+### 3.3 开始训练
+
+​    RoboSat 使用 [train](https://github.com/mapbox/robosat#rs-train) 命令进行训练。
+
+```shell
+docker run -it --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:latest-cpu train --model /data/model-unet.toml --dataset /data/dataset-building-weights.toml
+```
+
+​    `train` 命令的参数如下：
+
+> usage: `./rs train [-h] --model MODEL --dataset DATASET [--checkpoint CHECKPOINT] [--resume RESUME] [--workers WORKERS]`
+>
+> - positional arguments:
+>   - `--model MODEL` path to model configuration file (default: None)
+>   - `--dataset DATASET` path to dataset configuration file (default: None)
+>
+> - optional arguments:
+>   - `-h`, `--help show this help message and exit
+>   - `--checkpoint CHECKPOINT`  path to a model checkpoint (to retrain) (default: None)
+>   - `--resume RESUME`   resume training or fine-tuning (if checkpoint)  (default: False)
+>   - `--workers WORKERS`  number of workers pre-processi ng images (default: 0)  
+
+​    这里多了一个配置文件 `model-unet.toml` ，这个配置文件主要用来配置训练过程中的参数，包括是否启用 CUDA 、训练批次大小、影像瓦片的像素大小、检查点存储路径等。官方给出了[示例配置文件](https://github.com/mapbox/robosat/blob/master/config/model-unet.toml)，根据本实验的情况做了修改如下，配置如下。
+
+```
+# Configuration related to a specific model.
+# For syntax see: https://github.com/toml-lang/toml#table-of-contents
+
+# Model specific common attributes.
+[common]
+
+  # Use CUDA for GPU acceleration.
+  cuda       = false
+
+  # Batch size for training.
+  batch_size = 2
+
+  # Image side size in pixels.
+  image_size = 256
+
+  # Directory where to save checkpoints to during training.
+  checkpoint = '/data/checkpoint/'
 
 
-​    
+# Model specific optimization parameters.
+[opt]
+
+  # Total number of epochs to train for.
+  epochs     = 10
+
+  # Learning rate for the optimizer.
+  lr         = 0.01
+
+  # Loss function name (e.g 'Lovasz', 'mIoU' or 'CrossEntropy')
+  loss = 'Lovasz'
+```
+
