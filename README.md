@@ -36,7 +36,7 @@ docker run --runtime=nvidia -it --rm -v $PWD:/data --ipc=host mapbox/robosat:lat
 - 自有数据源。通过 [QGIS](https://qgis.org/en/site/) 或 ArcMap 等工具，加载遥感影像底图，描述的建筑物轮廓 Shapefile 数据。
 本文使用第二种数据来源，并已[开源数据源](https://github.com/geocompass/robosat_buildings_training/tree/master/shp_data)。开源的矢量数据覆盖厦门核心区。
 
-![训练区矢量数据预览](https://github.com/geocompass/robosat_buildings_training/blob/master/img/buia_xiamen_preview.png)
+![训练区矢量数据预览](https://github.com/geocompass/robosat_buildings_training/blob/master/img/buia_xiamen_preview.jpg)
 
 ### 2.2 获取建筑物轮廓geojson数据
 ​    通过在线工具 [mapshaper](https://mapshaper.org/)，将 shapefile 数据转换为 geojson 数据。
