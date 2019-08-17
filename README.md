@@ -34,7 +34,12 @@ docker run --runtime=nvidia -it --rm -v $PWD:/data --ipc=host mapbox/robosat:lat
 ​    已有的建筑物轮廓矢量数据用来作为建筑物提取的训练数据源。可以有两种方式获取：
 - OSM 数据源，可以在 [geofabrik](http://download.geofabrik.de/) 获取，通过 [osmium](https://github.com/osmcode/osmium-tool) 和 [robosat](https://github.com/mapbox/robosat) 工具[进行处理](https://www.openstreetmap.org/user/daniel-j-h/diary/44321)。
 - 自有数据源。通过 [QGIS](https://qgis.org/en/site/) 或 ArcMap 等工具，加载遥感影像底图，描述的建筑物轮廓 Shapefile 数据。
-本文使用第二种数据来源，并已[开源数据源](https://github.com/geocompass/robosat_buildings_training/tree/master/shp_data)。开源的矢量数据覆盖厦门核心区。
+
+
+
+​    **本文使用第二种数据来源，并已[开源数据源](https://github.com/geocompass/robosat_buildings_training/tree/master/shp_data)。开源的矢量数据覆盖厦门核心区。**
+
+
 
 ![训练区矢量数据预览](https://github.com/geocompass/robosat_buildings_training/blob/master/img/buia_xiamen_preview.jpg)
 
@@ -92,7 +97,7 @@ docker run -it --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:lates
 
 > - [谷歌地图CN影像](https://ditu.google.cn/)：http://ditu.google.cn/maps/vt/lyrs=s&x={x}&y={y}&z={z}
 > - [天地图影像](https://map.tianditu.gov.cn/)：https://t4.tianditu.gov.cn/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=2ce94f67e58faa24beb7cb8a09780552
-> - [ArcGIS Online影像](https://server.arcgisonline.com/arcgis/rest/services)：https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}
+> - [ArcGIS Online影像](https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer?f=jsapi)：https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}
 > - [MapBox影像](https://api.mapbox.com/styles/v1/mapbox/satellite-v9.html?title=true&access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4M29iazA2Z2gycXA4N2pmbDZmangifQ.-g_vE53SD2WrJ6tFX7QHmA#0.75/29.3/-124.8)：https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}@2x.png?sku=101KOLcQaDwG1&access_token=[token]
 
 ​    几种遥感影像数据源的比较：
@@ -312,4 +317,143 @@ docker run -it --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:lates
   # Loss function name (e.g 'Lovasz', 'mIoU' or 'CrossEntropy')
   loss = 'Lovasz'
 ```
+
+​    RoboSat 会进行多次迭代训练，每次迭代训练都会保存检查点(checkpoint)和各项指标等。其中，训练日志例如：
+
+```shell
+--- Hyper Parameters on Dataset: /data/dataset ---
+Batch Size:	 2
+Image Size:	 256
+Learning Rate:	 0.0001
+Loss function:	 Lovasz
+Weights :	 [1.644471, 5.409126]
+---
+Epoch: 1/10
+Train    loss: 0.3190, mIoU: 0.410, buildings IoU: 0.017, MCC: -0.002
+Validate loss: 0.3171, mIoU: 0.405, buildings IoU: 0.000, MCC: nan
+
+...
+
+Epoch: 10/10
+Train    loss: 0.2693, mIoU: 0.528, buildings IoU: 0.229, MCC: 0.330
+Validate loss: 0.2880, mIoU: 0.491, buildings IoU: 0.167, MCC: 0.262
+```
+
+​    可以选择最好的训练结果，保留其检查点( `checkpoint-***.pth` )，进入下一步 `predict`。一般来说，最后一个检查点效果最好。
+
+## 4. 预测
+
+### 4.1 准备预测区域数据
+
+​    RoboSat 仅支持从影像瓦片中提取建筑物，不支持从任意的 jpg 图片中提取。所以我们需要先准备预测区域的瓦片数据。
+
+​    通过 [geojson.io](http://geojson.io/) 绘制想要提取建筑物的范围，使用矩形框即可。将自动生成的 geojson 保存为 `predict_test.json`。
+
+​    通过 2.3 中的 `cover` 命令，获取待提取范围的瓦片列表 csv 文件，保存到 `buildings_predict.tiles` 文件中。
+
+```shell
+docker run -it --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:latest-cpu cover  --zoom 18 /data/shp_data/predict_test.json /data/buildings_predict.tiles
+```
+
+​    使用 2.4 中的 `download` 命令，下载待提取范围的影像瓦片，保存到 `images_predict` 文件夹中。
+
+```shell
+docker run -it --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:latest-cpu download https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x} /data/buildings_predict.tiles /data/images_predict
+```
+
+![预测区域的geojson](https://github.com/geocompass/robosat_buildings_training/blob/master/img/predict_region_geojson.jpg)
+
+### 4.2 预测待提取建筑物概率
+
+​    使用保存的检查点来（`checkpint`）预测图像中每个像素的分割概率，这些分割概率表示每个像素是建筑物还是背景的可能性，然后可以将这些概率转换为离散的分割掩模。
+
+​    通过 RoboSat 的 [predict](https://github.com/mapbox/robosat#rs-predict) 命令，将待预测区域的建筑物（ `images_predict` ）提取为分割概率（`predict_segmentation-probabilities`）。
+
+```shell
+docker run -it -d --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:latest-cpu predict --tile_size 256 --model /data/model-unet.toml --dataset /data/dataset-building.toml --checkpoint /data/checkpoint/checkpoint-00010-of-00010.pth /data/images_predict /data/predict_segmentation-probabilities
+```
+
+​    `predict` 命令的参数如下：
+
+> usage: `./rs predict [-h] [--batch_size BATCH_SIZE] --checkpoint CHECKPOINT [--overlap OVERLAP] --tile_size TILE_SIZE [--workers WORKERS] --model MODEL --dataset DATASET tiles probs`
+>
+> - positional arguments:
+>   - `tiles`   directory to read slippy map image tiles from
+>   - `probs`  directory to save slippy map probability masks to
+>
+> - optional arguments:
+>   - `-h`, `--help  show this help message and exit
+>      `
+>   - `--batch_size BATCH_SIZE`  images per batch (default: 1)
+>   - `--checkpoint CHECKPOINT`  model checkpoint to load (default: None)
+>   - `--overlap OVERLAP` tile pixel overlap to predict on (default: 32)
+>   - `--tile_size TILE_SIZE` tile size for slippy map tiles (default: None)
+>   - `--workers WORKERS` number of workers pre-processing images (default: 0)
+>   - `--model MODEL` path to model configuration file (default: None)
+>   - `--dataset DATASET`  path to dataset configuration file (default: None)
+
+![预测建筑物提取概率结果](https://github.com/geocompass/robosat_buildings_training/blob/master/img/predit_probabilities.gif)
+
+### 4.3 预测概率转换为建筑物掩模
+
+​    通过 RoboSat 的 [masks](https://github.com/mapbox/robosat#rs-masks) 命令，将上一步中的建筑物预测概率结果转换为建筑物掩模（`masks`），保存到 `predict_segmentation-masks` 文件夹中。
+
+```shell
+docker run -it -d --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:latest-cpu masks /data/predict_segmentation-masks /data/predict_segmentation-probabilities
+```
+
+> usage: `./rs masks [-h] [--weights WEIGHTS [WEIGHTS ...]] masks probs [probs ...]`
+>
+> - positional arguments:
+>   - `masks`  slippy map directory to save masks to
+>   - `probs`  slippy map directories with class probabilities
+>
+> - optional arguments:
+>   -  `-h`, `--help` show this help message and exit
+>   - `--weights WEIGHTS [WEIGHTS ...]`  weights for weighted average soft-voting (default:
+>                             None)
+
+![预测建筑物提取掩模结果](https://github.com/geocompass/robosat_buildings_training/blob/master/img/predit_masks.jpg)
+
+### 4.4 建筑物掩模转换为geojson
+
+​    通过 RoboSat 的 [features]() 命令，将上一步中的建筑物掩模转换为 geojson，保存在 `predict_geojson_features` 文件夹中。
+
+```shell
+docker run -it --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:latest-cpu features /data/predict_segmentation-masks /data/predict_geojson_features
+```
+
+> usage: `./rs features [-h] --type {parking} --dataset DATASET masks out`
+>
+> - positional arguments:
+>   - `masks`  slippy map directory with segmentation masks
+>   - `out` path to GeoJSON file to store features in
+>
+> - optional arguments:
+>   -  `-h`, `--help`  show this help message and exit
+>   -  `--type {parking}` type of feature to extract (default: None)
+>   -  `--dataset DATASET`  path to dataset configuration file (default: None)
+
+（目前 `features` 命令中对 `--type` 设置有bug，无法正常执行。）
+
+### 4.5 合并掩模分割的 geojson
+
+​    通过 RoboSat 的 [merge](https://github.com/mapbox/robosat#rs-merge)  命令，将上一步中生成的分割的 geojson 要素进行合并，结果保存在 `predict_geojson_merge`文件夹中。
+
+```
+docker run -it --rm -v $PWD:/data --ipc=host --network=host mapbox/robosat:latest-cpu features /data/predict_geojson /data/predict_geojson_merge
+```
+
+> usage: `./rs merge [-h] --threshold THRESHOLD features out`
+>
+> - positional arguments:
+>   -  `features` GeoJSON file to read features from
+>   -  `out` path to GeoJSON to save merged features to
+>
+> - optional arguments:
+>   -  `-h`, `--help` show this help message and exit
+>   -  `--threshold THRESHOLD` minimum distance to adjacent features, in m (default:
+>                             None)
+
+
 
