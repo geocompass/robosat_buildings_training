@@ -37,7 +37,10 @@ docker run --runtime=nvidia -it --rm -v $PWD:/data --ipc=host mapbox/robosat:lat
 
 
 
-​    **本文使用第二种数据来源，并已[开源数据源](https://github.com/geocompass/robosat_buildings_training/tree/master/shp_data)。开源的矢量数据覆盖厦门核心区。**
+​    **本文使用第二种数据来源，并已[开源数据源](https://github.com/geocompass/robosat_buildings_training/tree/master/shp_data)，开源的矢量数据覆盖厦门核心区。**
+
+​    **考虑到使用个人电脑没有 CUDA 加速训练成本较高，本文使用 [buia_xiamen_min_shp](https://github.com/geocompass/robosat_buildings_training/blob/master/shp_data/buia_xiamen_min_shp.zip)，包含厦门核心区部分区域，共5679个建筑物轮廓。在Docker配置为 处理器(`CPU`) 4核、内存(`RAM`)16GB、交换内存(`Swap`)3GB时，训练时间大约2.5小时。**
+
 
 
 

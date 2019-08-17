@@ -1,0 +1,45 @@
+--- Hyper Parameters on Dataset: /data/dataset ---
+Batch Size:	 2
+Image Size:	 256
+Learning Rate:	 0.0001
+Loss function:	 Lovasz
+Weights :	 [1.644471, 5.409126]
+---
+Epoch: 1/10
+--- Hyper Parameters on Dataset: /data/dataset ---
+Batch Size:	 2
+Image Size:	 256
+Learning Rate:	 0.0001
+Loss function:	 Lovasz
+Weights :	 [1.644471, 5.409126]
+---
+Epoch: 1/10
+Train    loss: 0.3190, mIoU: 0.410, buildings IoU: 0.017, MCC: -0.002
+Validate loss: 0.3171, mIoU: 0.405, buildings IoU: 0.000, MCC: nan
+Epoch: 2/10
+Train    loss: 0.2999, mIoU: 0.408, buildings IoU: 0.000, MCC: nan
+Validate loss: 0.3064, mIoU: 0.405, buildings IoU: 0.000, MCC: nan
+Epoch: 3/10
+Train    loss: 0.2970, mIoU: 0.408, buildings IoU: 0.000, MCC: nan
+Validate loss: 0.3039, mIoU: 0.405, buildings IoU: 0.000, MCC: nan
+Epoch: 4/10
+Train    loss: 0.2911, mIoU: 0.435, buildings IoU: 0.055, MCC: 0.128
+Validate loss: 0.2869, mIoU: 0.477, buildings IoU: 0.137, MCC: 0.243
+Epoch: 5/10
+Train    loss: 0.2863, mIoU: 0.486, buildings IoU: 0.153, MCC: 0.239
+Validate loss: 0.2869, mIoU: 0.527, buildings IoU: 0.244, MCC: 0.317
+Epoch: 6/10
+Train    loss: 0.2847, mIoU: 0.490, buildings IoU: 0.160, MCC: 0.251
+Validate loss: 0.2872, mIoU: 0.456, buildings IoU: 0.094, MCC: 0.211
+Epoch: 7/10
+Train    loss: 0.2821, mIoU: 0.506, buildings IoU: 0.192, MCC: 0.280
+Validate loss: 0.2808, mIoU: 0.514, buildings IoU: 0.209, MCC: 0.306
+Epoch: 8/10
+Train    loss: 0.2769, mIoU: 0.512, buildings IoU: 0.202, MCC: 0.296
+Validate loss: 0.2885, mIoU: 0.508, buildings IoU: 0.205, MCC: 0.284
+Epoch: 9/10
+Train    loss: 0.2745, mIoU: 0.521, buildings IoU: 0.217, MCC: 0.313
+Validate loss: 0.2823, mIoU: 0.560, buildings IoU: 0.306, MCC: 0.378
+Epoch: 10/10
+Train    loss: 0.2693, mIoU: 0.528, buildings IoU: 0.229, MCC: 0.330
+Validate loss: 0.2880, mIoU: 0.491, buildings IoU: 0.167, MCC: 0.262
