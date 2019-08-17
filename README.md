@@ -1,5 +1,5 @@
 # robosat_buildings_training
-​    本文介绍了如何使用 [mapbox/robosat](https://github.com/mapbox/robosat) 工具来进行训练自动提取建筑物。包括系统准备工作、数据准备工作和训练与建模。通过根据文章的描述，可以完成训练任务。
+​    本文介绍了如何使用 [mapbox/robosat](https://github.com/mapbox/robosat) 工具，基于深度学习训练，从常规的遥感影像瓦片地图服务中自动提取建筑物。包括系统准备工作、数据准备工作和训练与建模。通过根据文章的描述，可以完成训练任务。
 
 ​    参考文章：[daniel-j-h : RoboSat ❤️ Tanzania](https://www.openstreetmap.org/user/daniel-j-h/diary/44321)
 
